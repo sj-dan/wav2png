@@ -10,7 +10,7 @@ Well, if you do the math, it makes sense. Each sample in a 24-bit signed integer
 So what if we encoded each sample from the WAV file as a pixel in the PNG file? I rest my case.
 
 ### Multi-channel support
-The way multi-channel support is handled is pretty simple. By default, the with of the output PNG file is 2000px, and if there are multiple channels, the width is a multiple of 2000px.
+The way multi-channel support is handled is pretty simple. By default, the width of the output PNG file is 2000px, and if there are multiple channels, the width is a multiple of 2000px.
 
 For example, a stereo WAV file would produce a PNG file with the width 4000px (2000px * 2 channels).
 
