@@ -20,9 +20,12 @@ void wav2png(const char *output_filename, int width, SNDFILE *sndfile, SF_INFO s
 
    width *= sinfo.channels;
 
-   printf("Printing %.0f samples into PNG file:\n", numSamples);
-
    printf("Width: %d\n", width);
+
+   printf("Channel count: %d\n",sinfo.channels);
+
+   printf("Printing %.0f samples into PNG file...", numSamples);
+   fflush(stdout);
 
    int height = ceil(numSamples / width);
 
@@ -76,6 +79,10 @@ void wav2png(const char *output_filename, int width, SNDFILE *sndfile, SF_INFO s
 
 void png2wav(const char *input_filename, const char *output_filename, int width_factor) {
    FILE *fp = fopen(input_filename, "rb");
+   if (!fp) {
+        perror("Error opening file");
+        return;
+    }
    png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
    png_infop pnginfo = png_create_info_struct(png);
    png_init_io(png, fp);
@@ -83,16 +90,19 @@ void png2wav(const char *input_filename, const char *output_filename, int width_
    int width, height, bitdepth, colorType;
    png_get_IHDR(png, pnginfo, &width, &height, &bitdepth, &colorType, NULL, NULL, NULL);
    printf("Width: %d, Height: %d\n",width,height);
-   printf("Encoding %d pixels into WAV file:\n", (width*height));
 
    SF_INFO sinfo;
    if (width%width_factor==0)
       sinfo.channels = (int)(width/width_factor);  // Stereo audio
    else
       sinfo.channels = 1;
-   printf("%d",sinfo.channels);
    sinfo.samplerate = 44100;  // Sample rate (adjust as needed)
    sinfo.format = SF_FORMAT_WAV | SF_FORMAT_PCM_24;
+
+   printf("Detected channel count: %d\n",sinfo.channels);
+   printf("Encoding %d pixels into WAV file...", (width*height));
+   fflush(stdout);
+
    SNDFILE *sndfile = sf_open(output_filename, SFM_WRITE, &sinfo);
 
    png_bytep row = (png_bytep)malloc(png_get_rowbytes(png, pnginfo));
@@ -172,6 +182,6 @@ int main(int argc, char *argv[])
       printf("Running in png2wav mode. (Mode 2)\n\n");
       png2wav(input_filename,output_filename,width);
    }
-
+   printf(" Done!\n");
    return 0;
 }
