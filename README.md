@@ -39,6 +39,6 @@ Usage: ./wav2png --reverse <input_png_file> <output_wav_file>
 ```
 
 ## Try it yourself!
-Here's an image that should decode to this:
-
+Here's an image that should decode to [this](https://youtu.be/ptmHKa7KlMo):
+![Egmont Overture Finale](https://github.com/sj-dan/wav2png/raw/main/examples/egmont.png)
 Command: `./wav2png --reverse example.png example.wav`
