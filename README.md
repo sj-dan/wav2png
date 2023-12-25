@@ -14,6 +14,9 @@ The way multi-channel support is handled is pretty simple. By default, the width
 
 For example, a stereo WAV file would produce a PNG file with the width 4000px (2000px * 2 channels).
 
+### Sample rate support
+The sample rate, as well as the sample count (since the amount of samples isn't always divisible by the width of the image) are both stored as PNG comments. If those PNG comments are not present, the program will default to 44.1kHz for the sample rate, and width*height for the sample count. In both cases, no detail is lost, as sample rate can be changed with programs such as Audacity, and the sample count is always rounded up, resulting in some silence at the end, instead of resulting in the audio being truncated (i.e. if it was rounded down).
+
 ## Compile instructions
 **NOTE: This program is completely untested on Windows.**
 
@@ -26,8 +29,6 @@ git clone https://github.com/sj-dan/wav2png; cd ./wav2png; chmod +x ./build.sh; 
 Your executable will end up in a folder called `dist/` by default.
 
 ## Basic usage
-
-**NOTE: wav2png currently only supports 44.1kHz audio files, as that is the sample rate hard coded. I will add an option to change this in the future.**
 
 When converting WAV -> PNG:
 ```

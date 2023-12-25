@@ -20,11 +20,8 @@ void wav2png(const char *output_filename, int width, SNDFILE *sndfile, SF_INFO s
 
    width *= sinfo.channels;
 
-   printf("Width: %d\n", width);
+   printf("Printing %.0f samples->pixels (@%d channels) into PNG file...", numSamples/sinfo.channels,sinfo.channels);
 
-   printf("Channel count: %d\n",sinfo.channels);
-
-   printf("Printing %.0f samples into PNG file...", numSamples);
    fflush(stdout);
 
    int height = ceil(numSamples / width);
@@ -38,6 +35,25 @@ void wav2png(const char *output_filename, int width, SNDFILE *sndfile, SF_INFO s
        PNG_INTERLACE_NONE,
        PNG_COMPRESSION_TYPE_DEFAULT,
        PNG_FILTER_TYPE_DEFAULT);
+
+   png_text text[2];
+
+   char smpRt[8];
+   snprintf(smpRt,8,"%d",sinfo.samplerate);
+   char key0[] = "smpRt";
+   text[0].key = key0;
+   text[0].text = smpRt;
+   text[0].compression = PNG_TEXT_COMPRESSION_NONE;
+
+   char smpFr[20];
+   snprintf(smpFr,20,"%d",sinfo.frames*sinfo.channels);
+   char key1[] = "smpFr";
+   text[1].key = key1;
+   text[1].text = smpFr;
+   text[1].compression = PNG_TEXT_COMPRESSION_NONE;
+
+   png_set_text(png,pnginfo,text,2);
+
    png_write_info(png, pnginfo);
 
    uint32_t *samples = (uint32_t *)malloc(numSamples * sizeof(uint32_t));
@@ -89,18 +105,28 @@ void png2wav(const char *input_filename, const char *output_filename, int width_
    png_read_info(png, pnginfo);
    int width, height, bitdepth, colorType;
    png_get_IHDR(png, pnginfo, &width, &height, &bitdepth, &colorType, NULL, NULL, NULL);
-   printf("Width: %d, Height: %d\n",width,height);
 
    SF_INFO sinfo;
    if (width%width_factor==0)
       sinfo.channels = (int)(width/width_factor);  // Stereo audio
    else
       sinfo.channels = 1;
-   sinfo.samplerate = 44100;  // Sample rate (adjust as needed)
    sinfo.format = SF_FORMAT_WAV | SF_FORMAT_PCM_24;
 
-   printf("Detected channel count: %d\n",sinfo.channels);
-   printf("Encoding %d pixels into WAV file...", (width*height));
+   png_textp text;
+   int text_count;
+
+   int smpFr;
+   png_get_text(png,pnginfo,&text,&text_count);
+   if (text_count == 2 && strcmp("smpRt",text[0].key)==0 && strcmp("smpFr",text[1].key)==0) {
+      sinfo.samplerate = atoi(text[0].text);
+      smpFr = atoi(text[1].text);
+   } else {
+      fprintf(stderr,"Bad comment format, defaulting to 44.1kHz and samplecount=width*height\n");
+      sinfo.samplerate = 44100;
+      smpFr = width*height;
+   }
+   printf("Encoding %d pixels->samples (@%d channels) into WAV file...", smpFr/sinfo.channels, sinfo.channels);
    fflush(stdout);
 
    SNDFILE *sndfile = sf_open(output_filename, SFM_WRITE, &sinfo);
@@ -115,7 +141,7 @@ void png2wav(const char *input_filename, const char *output_filename, int width_
    else
       coeff = 3;
 
-   for (int y = 0; y < height; y++) {
+   for (int y = 0; y < height-1; y++) {
       png_read_row(png, row, NULL);
 
       for (int x = 0; x < width; x++) {
@@ -124,8 +150,28 @@ void png2wav(const char *input_filename, const char *output_filename, int width_
          int bv = row[coeff*x+2];
          samplerow[x] = (rv << 24) | (gv << 16) | (bv << 8);
       }
+
       sf_writef_int(sndfile, samplerow, width/sinfo.channels);
    }
+
+   free(samplerow);
+
+   png_read_row(png, row, NULL);
+
+   int lastRow = smpFr % width;
+   if (lastRow == 0)
+      lastRow = width;
+
+   samplerow = (int *)malloc(lastRow * sizeof(int));
+
+   for (int x = 0; x < lastRow; x++) {
+      int rv = row[coeff*x];
+      int gv = row[coeff*x+1];
+      int bv = row[coeff*x+2];
+      samplerow[x] = (rv << 24) | (gv << 16) | (bv << 8);
+   }
+
+   sf_writef_int(sndfile, samplerow, lastRow/sinfo.channels);
 
    sf_close(sndfile);
    free(row);
